@@ -6,8 +6,6 @@ PROTOCOLS = {
     False: "http"
 }
 
-IGNORE_CHARS = ["\x00", "\x01", "\x08"]
-
 DAHUA_DEVICE_TYPE = "deviceType"
 DAHUA_SERIAL_NUMBER = "serialNumber"
 DAHUA_VERSION = "version"

@@ -81,20 +81,19 @@ class DahuaAPI(asyncio.Protocol):
 
     def data_received(self, data):
         try:
-            messages = data.decode("unicode-escape").split("\n")
-            _LOGGER.debug(f"Data received: {data}")
+            _LOGGER.debug(f"Received data, Raw Data: {data}")
+            messages = self.parse_data(data)
 
             for message_data in messages:
-                if message_data is not None:
-                    message = self.parse_response(message_data)
+                message = self.parse_message(message_data)
 
-                    if message is not None:
-                        _LOGGER.debug(f"Handling message: {message}")
+                if message is not None:
+                    _LOGGER.debug(f"Handling message: {message}")
 
-                        message_id = message.get("id")
+                    message_id = message.get("id")
 
-                        handler: Callable = self.data_handlers.get(message_id, self.handle_default)
-                        handler(message)
+                    handler: Callable = self.data_handlers.get(message_id, self.handle_default)
+                    handler(message)
 
         except Exception as ex:
             exc_type, exc_obj, exc_tb = sys.exc_info()
@@ -400,14 +399,30 @@ class DahuaAPI(asyncio.Protocol):
         self.outgoing_events.put(event_data)
 
     @staticmethod
-    def parse_response(message_data):
+    def parse_data(data):
+        _LOGGER.debug(f"Parsing data, Content: {data}")
+
+        data_items = bytearray()
+
+        for data_item in data:
+            data_item_char = chr(data_item)
+            parsed_char = ascii(data_item_char).replace("'", "")
+            is_valid = data_item_char == parsed_char or data_item_char == '\n'
+
+            if is_valid:
+                data_items.append(data_item)
+
+        messages = data_items.decode("unicode-escape").split("\n")
+        _LOGGER.debug(f"Data cleaned up, Messages: {messages}")
+
+        return messages
+
+    @staticmethod
+    def parse_message(message_data):
         result = None
 
         try:
-            for invalid_char in IGNORE_CHARS:
-                message_data = message_data.replace(invalid_char, "")
-
-            if len(message_data) > 0:
+            if message_data is not None and "{" in message_data:
                 first_char = message_data.index("{")
                 message = message_data[first_char:]
 
