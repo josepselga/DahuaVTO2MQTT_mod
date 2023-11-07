@@ -81,13 +81,20 @@ class DahuaAPI(asyncio.Protocol):
 
     def data_received(self, data):
         try:
-            message = self.parse_response(data)
-            _LOGGER.debug(f"Data received: {message}")
+            messages = data.decode("unicode-escape").split("\n")
+            _LOGGER.debug(f"Data received: {data}")
 
-            message_id = message.get("id")
+            for message_data in messages:
+                if message_data is not None:
+                    message = self.parse_response(message_data)
 
-            handler: Callable = self.data_handlers.get(message_id, self.handle_default)
-            handler(message)
+                    if message is not None:
+                        _LOGGER.debug(f"Handling message: {message}")
+
+                        message_id = message.get("id")
+
+                        handler: Callable = self.data_handlers.get(message_id, self.handle_default)
+                        handler(message)
 
         except Exception as ex:
             exc_type, exc_obj, exc_tb = sys.exc_info()
@@ -393,22 +400,23 @@ class DahuaAPI(asyncio.Protocol):
         self.outgoing_events.put(event_data)
 
     @staticmethod
-    def parse_response(response):
+    def parse_response(message_data):
         result = None
 
         try:
-            response_parts = str(response).split("\\x00")
-            for response_part in response_parts:
-                if response_part.startswith("{"):
-                    end = response_part.rindex("}") + 1
-                    message = response_part[0:end]
+            for invalid_char in IGNORE_CHARS:
+                message_data = message_data.replace(invalid_char, "")
 
-                    result = json.loads(message)
+            if len(message_data) > 0:
+                first_char = message_data.index("{")
+                message = message_data[first_char:]
+
+                result = json.loads(message)
 
         except Exception as e:
             exc_type, exc_obj, exc_tb = sys.exc_info()
 
-            _LOGGER.error(f"Failed to read data: {response}, error: {e}, Line: {exc_tb.tb_lineno}")
+            _LOGGER.error(f"Failed to read data: {message_data}, error: {e}, Line: {exc_tb.tb_lineno}")
 
         return result
 
