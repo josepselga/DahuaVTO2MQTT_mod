@@ -407,7 +407,7 @@ class DahuaAPI(asyncio.Protocol):
         for data_item in data:
             data_item_char = chr(data_item)
             parsed_char = ascii(data_item_char).replace("'", "")
-            is_valid = data_item_char == parsed_char or data_item_char == '\n'
+            is_valid = data_item_char == parsed_char or data_item_char in ['\n', '\'']
 
             if is_valid:
                 data_items.append(data_item)
