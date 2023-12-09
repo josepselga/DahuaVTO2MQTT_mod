@@ -10,6 +10,7 @@ from threading import Timer
 from typing import Optional, Dict, Any, Callable
 
 import requests
+from requests.auth import HTTPDigestAuth
 
 from common.consts import *
 from models.DahuaConfigData import DahuaConfigurationData
@@ -364,7 +365,7 @@ class DahuaAPI(asyncio.Protocol):
 
                 url = f"{self.dahua_config.base_url}{ENDPOINT_ACCESS_CONTROL}{door_id}"
 
-                response = requests.get(url, verify=False, auth=self.dahua_config.auth)
+                response = requests.get(url, verify=False, auth=HTTPDigestAuth(self.dahua_config.auth))
 
                 response.raise_for_status()
 
